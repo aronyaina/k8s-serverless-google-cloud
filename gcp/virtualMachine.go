@@ -5,8 +5,7 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-func GenerateVirtualMachine(ctx *pulumi.Context, subnet *compute.Subnetwork) (*compute.Instance, error) {
-	var instanceName string = "my-vm"
+func GenerateVirtualMachine(ctx *pulumi.Context, instanceName string, network *compute.Network, subnetwork *compute.Subnetwork) (*compute.Instance, error) {
 	var machineType pulumi.String = "e2-micro"
 	var region pulumi.String = "us-central1-a"
 	var image pulumi.String = "ubuntu-os-cloud/ubuntu-2004-lts"
@@ -22,9 +21,15 @@ func GenerateVirtualMachine(ctx *pulumi.Context, subnet *compute.Subnetwork) (*c
 			},
 		},
 
+		Tags: pulumi.StringArray{
+			pulumi.String("worker"),
+			pulumi.String("kubernetes"),
+		},
+
 		NetworkInterfaces: compute.InstanceNetworkInterfaceArray{
 			&compute.InstanceNetworkInterfaceArgs{
-				Subnetwork: subnet.ID(), // Associating the instance with the subnetwork
+				Network:    network.Name,
+				Subnetwork: subnetwork.Name,
 				AccessConfigs: compute.InstanceNetworkInterfaceAccessConfigArray{
 					&compute.InstanceNetworkInterfaceAccessConfigArgs{
 						NetworkTier: networkTier,

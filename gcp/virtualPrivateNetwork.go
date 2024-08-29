@@ -22,7 +22,7 @@ func GeneratePrivateNetwork(ctx *pulumi.Context) (*compute.Network, error) {
 func GenerateSubNetwork(ctx *pulumi.Context, network *compute.Network) (*compute.Subnetwork, error) {
 	var subnetworkName string = "my-vpc-subnetwork"
 	var ipAddr pulumi.String = "10.0.0.0/24"
-	var region pulumi.String = "us-central1-a"
+	var region pulumi.String = "us-central1"
 	var purpose pulumi.String = "PRIVATE"
 
 	subnetwork, err := compute.NewSubnetwork(ctx, subnetworkName, &compute.SubnetworkArgs{
@@ -31,7 +31,7 @@ func GenerateSubNetwork(ctx *pulumi.Context, network *compute.Network) (*compute
 		Network:     network.ID(),
 		Region:      region,
 		Purpose:     purpose,
-	})
+	}, pulumi.DependsOn([]pulumi.Resource{network}))
 
 	if err != nil {
 		return nil, err

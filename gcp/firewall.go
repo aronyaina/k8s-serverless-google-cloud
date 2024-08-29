@@ -1,0 +1,34 @@
+package gcp
+
+import (
+	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/compute"
+	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+)
+
+func GenerateFirewall(ctx *pulumi.Context, network *compute.Network) error {
+	protocolsAndPorts := map[string][]string{
+		"tcp": {
+			"80",
+			"443",
+		},
+		"icmp": {},
+	}
+
+	for protocol, ports := range protocolsAndPorts {
+		_, err := compute.NewFirewall(ctx, "firewall-"+string(protocol), &compute.FirewallArgs{
+			Network: network.ID(), // Ensure the network ID is set correctly
+			Allows: compute.FirewallAllowArray{
+				&compute.FirewallAllowArgs{
+					Protocol: pulumi.String(protocol),
+					Ports:    pulumi.StringArray(pulumi.ToStringArray(ports)),
+				},
+			},
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
