@@ -1,0 +1,7 @@
+name: k8s-serverless
+runtime: go
+description: Serverless minimal projects
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: gcp-go
