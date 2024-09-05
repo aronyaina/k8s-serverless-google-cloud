@@ -10,6 +10,7 @@ func GenerateFirewall(ctx *pulumi.Context, network *compute.Network) error {
 		"tcp": {
 			"80",
 			"443",
+			"22",
 		},
 		"icmp": {},
 	}
@@ -22,6 +23,11 @@ func GenerateFirewall(ctx *pulumi.Context, network *compute.Network) error {
 					Protocol: pulumi.String(protocol),
 					Ports:    pulumi.StringArray(pulumi.ToStringArray(ports)),
 				},
+			},
+			Direction: pulumi.String("INGRESS"), // Specify the direction of the traffic
+			Priority:  pulumi.Int(1000),
+			SourceRanges: pulumi.StringArray{
+				pulumi.String("0.0.0.0/0"), // Allow from any source IP range
 			},
 		})
 

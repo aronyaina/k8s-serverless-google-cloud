@@ -5,8 +5,8 @@ go 1.21
 toolchain go1.23.0
 
 require (
-	github.com/pulumi/pulumi-gcp/sdk/v7 v7.23.0
-	github.com/pulumi/pulumi/sdk/v3 v3.127.0
+	github.com/pulumi/pulumi-gcp/sdk/v7 v7.38.0
+	github.com/pulumi/pulumi/sdk/v3 v3.129.0
 )
 
 require github.com/BurntSushi/toml v1.2.1 // indirect
