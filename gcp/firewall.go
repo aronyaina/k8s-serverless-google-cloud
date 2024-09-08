@@ -8,9 +8,16 @@ import (
 func GenerateFirewall(ctx *pulumi.Context, network *compute.Network) error {
 	protocolsAndPorts := map[string][]string{
 		"tcp": {
+			"22",
+			"53",
 			"80",
 			"443",
-			"22",
+			"2379",
+			"10250",
+			"10257",
+			"10259",
+			"16443",
+			"25000",
 		},
 		"icmp": {},
 	}

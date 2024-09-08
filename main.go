@@ -3,9 +3,7 @@ package main
 import (
 	"k8s-serverless/gcp"
 	"log"
-	"strconv"
 
-	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/compute"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
@@ -55,21 +53,21 @@ func main() {
 			return err
 		}
 
-		masterMachine, err := gcp.GenerateMasterMachine(ctx, "master-node", network, subnet, bucket, serviceAccount)
+		masterMachine, err := gcp.GenerateMasterMachine(ctx, VM_NUMBER, "master-node", network, subnet, bucket, serviceAccount)
 		if err != nil {
 			log.Println("error while creating master machine")
 			return err
 		}
 
-		var allMachines []*compute.Instance
-		for i := 1; i <= VM_NUMBER; i++ {
-			machine, err := gcp.GenerateWorkerMachine(ctx, masterMachine, "worker-node-"+strconv.Itoa(i), network, subnet, bucket, serviceAccount)
+		//var allMachines []*compute.Instance
+		//for i := 1; i <= VM_NUMBER; i++ {
+		//	machine, err := gcp.GenerateWorkerMachine(ctx, i, masterMachine, "worker-node-"+strconv.Itoa(i), network, subnet, bucket, serviceAccount)
 
-			if err != nil {
-				return err
-			}
-			allMachines = append(allMachines, machine)
-		}
+		//	if err != nil {
+		//		return err
+		//	}
+		//	allMachines = append(allMachines, machine)
+		//}
 
 		//provider, err := k8s.GenerateProvider(ctx, machine)
 		//if err != nil {
@@ -81,13 +79,11 @@ func main() {
 		ctx.Export("serviceAccountName", serviceAccount.Name)
 		ctx.Export("BucketName", bucket.Name)
 
-		for i, machine := range allMachines {
-			ctx.Export("instanceName"+strconv.Itoa(i+1), machine.Name) // Add an index to make export names unique
-			ctx.Export("instanceExternalIP"+strconv.Itoa(i+1), machine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp())
-			ctx.Export("instanceInternalIP"+strconv.Itoa(i+1), machine.NetworkInterfaces.Index(pulumi.Int(0)).NetworkIp())
-		}
-
-		ctx.Export("tokenBucket", bucket.Name)
+		//for i, machine := range allMachines {
+		//	ctx.Export("instanceName"+strconv.Itoa(i+1), machine.Name) // Add an index to make export names unique
+		//	ctx.Export("instanceExternalIP"+strconv.Itoa(i+1), machine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp())
+		//	ctx.Export("instanceInternalIP"+strconv.Itoa(i+1), machine.NetworkInterfaces.Index(pulumi.Int(0)).NetworkIp())
+		//}
 		ctx.Export("masterName", masterMachine.Name) // Add an index to make export names unique
 		ctx.Export("masterExternalIP", masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp())
 		ctx.Export("masterInternalIP", masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).NetworkIp())

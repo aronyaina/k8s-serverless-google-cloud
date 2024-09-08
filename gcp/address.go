@@ -7,7 +7,7 @@ import (
 
 func GenerateAddress(ctx *pulumi.Context) (*compute.Address, error) {
 	address, err := compute.NewAddress(ctx, "address", &compute.AddressArgs{
-		Name:        pulumi.String("my-internal-address-"),
+		Name:        pulumi.String("my-internal-address"),
 		AddressType: pulumi.String("INTERNAL"),
 		Purpose:     pulumi.String("GCE_ENDPOINT"),
 	})
