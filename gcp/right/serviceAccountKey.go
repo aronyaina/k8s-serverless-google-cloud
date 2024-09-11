@@ -1,4 +1,4 @@
-package gcp
+package right
 
 import (
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/serviceaccount"

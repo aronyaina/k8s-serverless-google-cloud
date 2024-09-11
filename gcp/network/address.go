@@ -1,4 +1,4 @@
-package gcp
+package network
 
 import (
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/compute"
