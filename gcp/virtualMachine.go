@@ -9,40 +9,60 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-func GenerateWorkerMachine(ctx *pulumi.Context, workerIndice int, masterNode *compute.Instance, instanceName string, network *compute.Network, subnetwork *compute.Subnetwork, bucket *storage.Bucket, service_account *serviceaccount.Account) (*compute.Instance, error) {
-	var machineType pulumi.String = "e2-micro"
+func GenerateWorkerMachine(ctx *pulumi.Context, workerIndex int, lastInstance *compute.Instance, instanceName string, network *compute.Network, subnetwork *compute.Subnetwork, bucket *storage.Bucket, service_account *serviceaccount.Account) (*compute.Instance, error) {
+	var machineType pulumi.String = "e2-small"
 	var region pulumi.String = "us-central1-a"
 	var image pulumi.String = "ubuntu-os-cloud/ubuntu-2004-lts"
 	var networkTier pulumi.String = "STANDARD"
 
-	worker_command := pulumi.All(workerNumber, bucket.Name).ApplyT(func(args []interface{}) (string, error) {
-		workerNum := args[0].(int)
-		bucketName := args[1].(string)
-
+	workerCommand := pulumi.All(bucket.Name, workerIndex).ApplyT(func(args []interface{}) (string, error) {
+		bucketName := args[0].(string)
+		workerIndice := args[1].(int)
 		return fmt.Sprintf(`#!/bin/bash
 			LOG_FILE="/var/log/startup_script.log"
 			exec > >(tee -a $LOG_FILE) 2>&1
 
-			echo "Starting script execution" | tee -a $LOG_FILE
 			sudo apt-get update | tee -a $LOG_FILE
 			sudo snap install microk8s --classic --channel=1.31 | tee -a $LOG_FILE
-			sudo usermod -aG microk8s $USER | tee -a $LOG_FILE
-			newgrp microk8s | tee -a $LOG_FILE
+			sudo usermod -aG microk8s $(whoami) | tee -a $LOG_FILE
+			newgrp microk8s 
 			while ! sudo microk8s status --wait-ready; do
 				echo "waiting for microk8s to be ready" | tee -a $LOG_FILE
 				sleep 5
 			done
-			sudo microk8s enable dns | tee -a $LOG_FILE
-			for i in $(seq 1 $((%d))); do
-				JOIN_COMMAND=$(sudo microk8s add-node | grep 'microk8s join' | sed -n '2p')
-				if [ -n "$JOIN_COMMAND" ]; then
-					echo $JOIN_COMMAND > /home/join-command-$i.txt
-					gsutil cp /home/join-command-$i.txt gs://%s/join-command-$i.txt
-					echo "Join command for node $i stored and uploaded." | tee -a $LOG_FILE
+
+			MAX_COPY_RETRIES=10
+			COPY_RETRY_DELAY=15
+			JOIN_COMMAND_FILE="/home/join-command-%v.txt"
+			for ((i=1; i<=MAX_COPY_RETRIES; i++)); do
+				echo "Attempt $i to copy join command from GCS" | tee -a $LOG_FILE
+				gsutil cp gs://%s/join-command-%v.txt $JOIN_COMMAND_FILE
+				if [ -f "$JOIN_COMMAND_FILE" ]; then
+					echo "Join command file copied successfully on attempt $i" | tee -a $LOG_FILE
+					break
+				else
+					echo "Join command file not found, retrying in $COPY_RETRY_DELAY seconds..." | tee -a $LOG_FILE
+					sleep $COPY_RETRY_DELAY
 				fi
 			done
-			echo "Script execution completed" | tee -a $LOG_FILE
-			`, workerNum, bucketName), nil
+			JOIN_COMMAND=$(cat /home/join-command-%v.txt)
+			# Retry mechanism with backoff delay
+			MAX_RETRIES=5
+			RETRY_DELAY=10
+
+			for ((i=1; i<=MAX_RETRIES; i++)); do
+				echo "Attempt $i to join the cluster" | tee -a $LOG_FILE
+				sudo bash -c "$JOIN_COMMAND"
+				STATUS=$?
+				if [ $STATUS -eq 0 ]; then
+					echo "Successfully joined the cluster on attempt $i" | tee -a $LOG_FILE
+					break
+				else
+					echo "Failed to join the cluster, retrying in $RETRY_DELAY seconds..." | tee -a $LOG_FILE
+					sleep $RETRY_DELAY
+				fi
+			done
+			`, workerIndice, bucketName, workerIndice, workerIndice, workerIndice), nil
 	}).(pulumi.StringOutput)
 
 	instance, err := compute.NewInstance(ctx, instanceName, &compute.InstanceArgs{
@@ -77,21 +97,8 @@ func GenerateWorkerMachine(ctx *pulumi.Context, workerIndice int, masterNode *co
 				pulumi.String("https://www.googleapis.com/auth/cloud-platform"),
 			},
 		},
-		MetadataStartupScript: pulumi.String(fmt.Sprintf(`#!/bin/bash
-				sudo apt-get update
-				sudo snap install microk8s --classic --channel=1.31
-				sudo usermod -aG microk8s $USER
-				newgrp microk8s
-				while !sudo microk8s status --wait-ready; do
-					echo "waiting for microk8s to be ready"
-					sleep 5
-			  done
-				sudo microk8s enable dns
-				gsutil cp gs://%s/join-command-%d.txt /home/join-command.txt
-				JOIN_COMMAND=$(cat /home/join-command.txt)
-				sudo $JOIN_COMMAND
-			`, bucket.Name, workerIndice)),
-	}, pulumi.DependsOn([]pulumi.Resource{masterNode}))
+		MetadataStartupScript: workerCommand,
+	}, pulumi.DependsOn([]pulumi.Resource{lastInstance}))
 	if err != nil {
 		return nil, err
 	}
@@ -100,49 +107,30 @@ func GenerateWorkerMachine(ctx *pulumi.Context, workerIndice int, masterNode *co
 
 }
 
-func GenerateMasterMachine(ctx *pulumi.Context, workerNumber int, instanceName string, network *compute.Network, subnetwork *compute.Subnetwork, bucket *storage.Bucket, service_account *serviceaccount.Account) (*compute.Instance, error) {
+func GenerateMasterMachine(ctx *pulumi.Context, workerNumber int, instanceName string, network *compute.Network, subnetwork *compute.Subnetwork, bucket *storage.Bucket, publicKey string, service_account *serviceaccount.Account) (*compute.Instance, error) {
 	var machineType pulumi.String = "e2-small"
 	var region pulumi.String = "us-central1-a"
 	var image pulumi.String = "ubuntu-os-cloud/ubuntu-2004-lts"
 	var networkTier pulumi.String = "STANDARD"
-	//var command string = fmt.Sprintf(`#!/bin/bash
-	//			sudo apt-get update
-	//			sudo snap install microk8s --classic --channel=1.31
-	//			sudo usermod -aG microk8s $USER
-	//			newgrp microk8s
-	//			while ! sudo microk8s status --wait-ready; do
-	//					echo "waiting for microk8s to be ready"
-	//					sleep 5
-	//			done
-	//			sudo microk8s enable dns
-	//			for i in $(seq 1 $((%d))); do
-	//				JOIN_COMMAND=$(sudo microk8s add-node | grep 'microk8s join' | sed -n '2p')
-	//				if [ -n "$JOIN_COMMAND" ]; then
-	//					echo $JOIN_COMMAND > /home/join-command-$i.txt
-	//					gsutil cp /home/join-command-$i.txt gs://%s/join-command-$i.txt
-	//				fi
-	//			done
-	//			`, workerNumber, bucket.Name)
 
-	master_command := pulumi.All(workerNumber, bucket.Name).ApplyT(func(args []interface{}) (string, error) {
+	masterCommand := pulumi.All(workerNumber, bucket.Name).ApplyT(func(args []interface{}) (string, error) {
 		workerNum := args[0].(int)
 		bucketName := args[1].(string)
 
 		return fmt.Sprintf(`#!/bin/bash
 			LOG_FILE="/var/log/startup_script.log"
 			exec > >(tee -a $LOG_FILE) 2>&1
-
 			echo "Starting script execution" | tee -a $LOG_FILE
 			sudo apt-get update | tee -a $LOG_FILE
 			sudo snap install microk8s --classic --channel=1.31 | tee -a $LOG_FILE
-			sudo usermod -aG microk8s $USER | tee -a $LOG_FILE
+			sudo usermod -aG microk8s $(whoami) | tee -a $LOG_FILE
 			newgrp microk8s | tee -a $LOG_FILE
 			while ! sudo microk8s status --wait-ready; do
 				echo "waiting for microk8s to be ready" | tee -a $LOG_FILE
 				sleep 5
 			done
 			sudo microk8s enable dns | tee -a $LOG_FILE
-			for i in $(seq 1 $((%d))); do
+			for i in $(seq 1 %d); do
 				JOIN_COMMAND=$(sudo microk8s add-node | grep 'microk8s join' | sed -n '2p')
 				if [ -n "$JOIN_COMMAND" ]; then
 					echo $JOIN_COMMAND > /home/join-command-$i.txt
@@ -186,7 +174,10 @@ func GenerateMasterMachine(ctx *pulumi.Context, workerNumber int, instanceName s
 				pulumi.String("https://www.googleapis.com/auth/cloud-platform"),
 			},
 		},
-		MetadataStartupScript: master_command,
+		Metadata: pulumi.StringMap{
+			"ssh-keys": pulumi.String("pulumi:" + publicKey),
+		},
+		MetadataStartupScript: masterCommand,
 	}, pulumi.DependsOn([]pulumi.Resource{bucket}))
 	if err != nil {
 		return nil, err
