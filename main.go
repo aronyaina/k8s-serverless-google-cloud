@@ -156,18 +156,18 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
-			fmt.Println("hostname stdout", hostnameCmd.Stdout)
+
 			hostnameCmd.Stdout.ApplyT(func(result interface{}) (interface{}, error) {
-				if results, ok := result.([]interface{}); ok {
-					for _, res := range results {
-						if hostname, ok := res.(string); ok {
-							fmt.Printf("Hostname: %s\n", hostname)
-						}
-					}
-				} else {
-					return nil, fmt.Errorf("unexpected type for Stdout result")
-				}
-				return nil, nil
+				//if results, ok := result.([]interface{}); ok {
+				//	for _, res := range results {
+				//		if hostname, ok := res.(string); ok {
+				//			log.Println("Hostname: %s\n", hostname)
+				//		}
+				//	}
+				//} else {
+				//	return nil, fmt.Errorf("unexpected type for Stdout result")
+				//}
+				return result, nil
 			})
 			return hostnameCmd, nil
 		})
