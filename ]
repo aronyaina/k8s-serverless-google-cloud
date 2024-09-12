@@ -179,23 +179,18 @@ users:
 			return kubeConfig, nil
 		})
 
-		k8sConfig := pulumi.Output(kubeConfig).ApplyT(func(result interface{}) (string, error) {
+		k8sConfig := pulumi.All(kubeConfig).ApplyT(func(result interface{}) (string, error) {
 			if resultStr, ok := result.(string); ok {
 				return resultStr, nil
 			}
 			return "", fmt.Errorf("unexpected type for kubeconfig result")
 		}).(pulumi.StringOutput)
 
-		provider, err := kubernetes.NewProvider(ctx, "first-provider", &kubernetes.ProviderArgs{
+		kubernetes.NewProvider(ctx, "first-provider", &kubernetes.ProviderArgs{
 			Kubeconfig: k8sConfig,
 		})
 
-		if err != nil {
-			return err
-		}
-
-		ctx.Export("Provider", provider)
-		ctx.Export("Kubeconfig", k8sConfig)
+		ctx.Export("Kubeconfig", kubeConfig)
 
 		ctx.Export("serviceAccountName", serviceAccount.Name)
 		ctx.Export("BucketName", bucket.Name)

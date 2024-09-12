@@ -24,7 +24,7 @@ func GenerateSSHKeyPair(privateKeyPath string) (string, string, error) {
 		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 	})
 
-	if err := saveToFile(privateKeyPath, privateKeyPEM); err != nil {
+	if err := SaveToFile(privateKeyPath, privateKeyPEM); err != nil {
 		return "", "", fmt.Errorf("failed to save private key to file: %v", err)
 	}
 	// Create the corresponding public key
@@ -37,7 +37,7 @@ func GenerateSSHKeyPair(privateKeyPath string) (string, string, error) {
 	return string(privateKeyPEM), string(publicKeyBytes), nil
 }
 
-func saveToFile(filePath string, data []byte) error {
+func SaveToFile(filePath string, data []byte) error {
 	// Create or open the file
 	file, err := os.Create(filePath)
 	if err != nil {
