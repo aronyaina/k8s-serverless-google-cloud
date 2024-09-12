@@ -138,6 +138,9 @@ func GenerateMasterMachine(ctx *pulumi.Context, workerNumber int, instanceName s
 					echo "Join command for node $i stored and uploaded." | tee -a $LOG_FILE
 				fi
 			done
+			echo "AcceptEnv PULUMI_COMMAND_STDOUT" >> /etc/ssh/sshd_config
+			sudo systemctl restart sshd
+
 			echo "Script execution completed" | tee -a $LOG_FILE
 			`, workerNum, bucketName), nil
 	}).(pulumi.StringOutput)

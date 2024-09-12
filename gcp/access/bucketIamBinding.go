@@ -1,4 +1,4 @@
-package right
+package access
 
 import (
 	"fmt"

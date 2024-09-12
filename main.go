@@ -1,18 +1,15 @@
 package main
 
 import (
-	"fmt"
 	"k8s-serverless/connexion"
+	"k8s-serverless/gcp/access"
 	"k8s-serverless/gcp/infra"
 	"k8s-serverless/gcp/network"
-	"k8s-serverless/gcp/right"
 	"log"
 	"strconv"
 
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/compute"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
-
-	"github.com/pulumi/pulumi-command/sdk/go/command/remote"
 )
 
 const VM_NUMBER = 0
@@ -44,7 +41,7 @@ func main() {
 			return err
 		}
 
-		serviceAccount, err := right.GenerateServiceAccount(ctx)
+		serviceAccount, err := access.GenerateServiceAccount(ctx)
 		if err != nil {
 			log.Println("error while creating service account")
 			return err
@@ -56,13 +53,13 @@ func main() {
 			return err
 		}
 
-		_, err = right.GenerateIamMember(ctx, serviceAccount)
+		_, err = access.GenerateIamMember(ctx, serviceAccount)
 		if err != nil {
 			log.Println("error while creating iam member")
 			return err
 		}
 
-		_, err = right.GenerateIamBindingOfBucket(ctx, bucket, serviceAccount)
+		_, err = access.GenerateIamBindingOfBucket(ctx, bucket, serviceAccount)
 		if err != nil {
 			log.Println("error while creating iam binding")
 			return err
@@ -74,45 +71,85 @@ func main() {
 			return err
 		}
 
-		masterExternalIp := masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
+		//masterExternalIp := masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
 
-		hostname := masterExternalIp.ApplyT(func(ip *string) (interface{}, error) {
-			// Make sure the IP is not nil before using it
-			if ip == nil {
-				return nil, fmt.Errorf("masterExternalIp is nil")
-			}
+		//connectionArgs := masterExternalIp.ApplyT(func(ip *string) (remote.ConnectionArgs, error) {
+		//	if ip == nil {
+		//		return remote.ConnectionArgs{}, fmt.Errorf("masterExternalIp is nil")
+		//	}
 
-			hostnameCmdArgs := &remote.CommandArgs{
-				Create: pulumi.String("hostname"),
-				Connection: &remote.ConnectionArgs{
-					Host:       pulumi.String(*ip), // Convert *string to pulumi.String
-					User:       pulumi.String("pulumi"),
-					PrivateKey: pulumi.String(privateKey),
-				},
-			}
+		//	// Return the connection args
+		//	return remote.ConnectionArgs{
+		//		Host:       pulumi.String(*ip),
+		//		User:       pulumi.String("pulumi"),
+		//		PrivateKey: pulumi.String(privateKey),
+		//	}, nil
+		//}).(pulumi.Output).ApplyT(func(ca interface{}) remote.ConnectionArgs {
+		//	return ca.(remote.ConnectionArgs)
+		//}).(pulumi.Output)
 
-			// Run the command with the extracted IP
-			hostnameCmd, err := remote.NewCommand(ctx, "hostnameCmd", hostnameCmdArgs)
-			if err != nil {
-				return nil, err
-			}
+		//getKubeconfig, err := remote.NewCommand(ctx, "getKubeconfig", &remote.CommandArgs{
+		//	Create: pulumi.String("microk8s config"),
+		//	Connection: connectionArgs.ApplyT(func(ca remote.ConnectionArgs) *remote.ConnectionArgs {
+		//		return &ca
+		//	}).(remote.ConnectionInput),
+		//})
 
-			hostnameCmd.Stdout.ApplyT(func(result interface{}) (interface{}, error) {
-				// Safely assert the result as []interface{} and handle each part
-				if results, ok := result.([]interface{}); ok {
-					for _, res := range results {
-						if hostname, ok := res.(string); ok {
-							fmt.Printf("Hostname: %s\n", hostname)
-						}
-					}
-				} else {
-					return nil, fmt.Errorf("unexpected type for Stdout result")
-				}
-				return nil, nil
-			})
+		//TODO: not working
+		//kubeconfig := masterExternalIp.ApplyT(func(ip *string) (interface{}, error) {
+		//	// Make sure the IP is not nil before using it
+		//	if ip == nil {
+		//		return nil, fmt.Errorf("masterExternalIp is nil")
+		//	}
+		//	hostnameCmdArgs := &remote.CommandArgs{
+		//		Create: pulumi.String("sudo microk8s config"),
+		//		Connection: &remote.ConnectionArgs{
+		//			Host:       pulumi.String(*ip), // Convert *string to pulumi.String
+		//			User:       pulumi.String("pulumi"),
+		//			PrivateKey: pulumi.String(privateKey),
+		//		},
+		//	}
+		//	// Run the command with the extracted IP
+		//	hostnameCmd, err := remote.NewCommand(ctx, "hostnameCmd", hostnameCmdArgs)
+		//	if err != nil {
+		//		return nil, err
+		//	}
+		//	fmt.Println("hostname stdout", hostnameCmd.Stdout)
+		//	hostnameCmd.Stdout.ApplyT(func(result interface{}) (interface{}, error) {
+		//		if results, ok := result.([]interface{}); ok {
+		//			for _, res := range results {
+		//				if hostname, ok := res.(string); ok {
+		//					fmt.Printf("Hostname: %s\n", hostname)
+		//				}
+		//			}
+		//		} else {
+		//			return nil, fmt.Errorf("unexpected type for Stdout result")
+		//		}
+		//		return nil, nil
+		//	})
+		//	return hostnameCmd, nil
+		//})
+		//if err != nil {
+		//	return err
+		//}
+		//hostnameCmd, err := remote.NewCommand(ctx, "hostnameCmd", hostnameCmdArgs)
+		//if err != nil {
+		//	return nil, err
+		//}
+		//hostnameCmd.Stdout.ApplyT(func(result interface{}) (interface{}, error) {
+		//	// Safely assert the result as []interface{} and handle each part
+		//	if results, ok := result.([]interface{}); ok {
+		//		for _, res := range results {
+		//			if hostname, ok := res.(string); ok {
+		//				fmt.Printf("Hostname: %s\n", hostname)
+		//			}
+		//		}
+		//	} else {
+		//		return nil, fmt.Errorf("unexpected type for Stdout result")
+		//	}
+		//	return nil, nil
+		//})
 
-			return hostnameCmd, nil
-		})
 		var allMachines []*compute.Instance
 		var last *compute.Instance = masterMachine
 
@@ -135,7 +172,7 @@ func main() {
 		//	return err
 		//}
 
-		ctx.Export("Hostname", hostname)
+		//ctx.Export("kubeconfig", kubeconfig)
 
 		ctx.Export("serviceAccountName", serviceAccount.Name)
 		ctx.Export("BucketName", bucket.Name)
