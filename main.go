@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"k8s-serverless/connexion"
 	"k8s-serverless/gcp/access"
 	"k8s-serverless/gcp/infra"
@@ -8,11 +9,12 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/pulumi/pulumi-command/sdk/go/command/remote"
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/compute"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-const VM_NUMBER = 0
+const VM_NUMBER = 1
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
@@ -71,7 +73,7 @@ func main() {
 			return err
 		}
 
-		//masterExternalIp := masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
+		masterExternalIp := masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
 
 		//connectionArgs := masterExternalIp.ApplyT(func(ip *string) (remote.ConnectionArgs, error) {
 		//	if ip == nil {
@@ -95,46 +97,9 @@ func main() {
 		//	}).(remote.ConnectionInput),
 		//})
 
-		//TODO: not working
-		//kubeconfig := masterExternalIp.ApplyT(func(ip *string) (interface{}, error) {
-		//	// Make sure the IP is not nil before using it
-		//	if ip == nil {
-		//		return nil, fmt.Errorf("masterExternalIp is nil")
-		//	}
-		//	hostnameCmdArgs := &remote.CommandArgs{
-		//		Create: pulumi.String("sudo microk8s config"),
-		//		Connection: &remote.ConnectionArgs{
-		//			Host:       pulumi.String(*ip), // Convert *string to pulumi.String
-		//			User:       pulumi.String("pulumi"),
-		//			PrivateKey: pulumi.String(privateKey),
-		//		},
-		//	}
-		//	// Run the command with the extracted IP
-		//	hostnameCmd, err := remote.NewCommand(ctx, "hostnameCmd", hostnameCmdArgs)
-		//	if err != nil {
-		//		return nil, err
-		//	}
-		//	fmt.Println("hostname stdout", hostnameCmd.Stdout)
-		//	hostnameCmd.Stdout.ApplyT(func(result interface{}) (interface{}, error) {
-		//		if results, ok := result.([]interface{}); ok {
-		//			for _, res := range results {
-		//				if hostname, ok := res.(string); ok {
-		//					fmt.Printf("Hostname: %s\n", hostname)
-		//				}
-		//			}
-		//		} else {
-		//			return nil, fmt.Errorf("unexpected type for Stdout result")
-		//		}
-		//		return nil, nil
-		//	})
-		//	return hostnameCmd, nil
-		//})
-		//if err != nil {
-		//	return err
-		//}
 		//hostnameCmd, err := remote.NewCommand(ctx, "hostnameCmd", hostnameCmdArgs)
 		//if err != nil {
-		//	return nil, err
+		//	return err
 		//}
 		//hostnameCmd.Stdout.ApplyT(func(result interface{}) (interface{}, error) {
 		//	// Safely assert the result as []interface{} and handle each part
@@ -172,7 +137,45 @@ func main() {
 		//	return err
 		//}
 
-		//ctx.Export("kubeconfig", kubeconfig)
+		//NOTE: Not working
+		kubeconfig := masterExternalIp.ApplyT(func(ip *string) (interface{}, error) {
+			// Make sure the IP is not nil before using it
+			if ip == nil {
+				return nil, fmt.Errorf("masterExternalIp is nil")
+			}
+			hostnameCmdArgs := &remote.CommandArgs{
+				Create: pulumi.String("sudo microk8s config"),
+				Connection: &remote.ConnectionArgs{
+					Host:       pulumi.String(*ip), // Convert *string to pulumi.String
+					User:       pulumi.String("pulumi"),
+					PrivateKey: pulumi.String(privateKey),
+				},
+			}
+			// Run the command with the extracted IP
+			hostnameCmd, err := remote.NewCommand(ctx, "hostnameCmd", hostnameCmdArgs)
+			if err != nil {
+				return nil, err
+			}
+			fmt.Println("hostname stdout", hostnameCmd.Stdout)
+			hostnameCmd.Stdout.ApplyT(func(result interface{}) (interface{}, error) {
+				if results, ok := result.([]interface{}); ok {
+					for _, res := range results {
+						if hostname, ok := res.(string); ok {
+							fmt.Printf("Hostname: %s\n", hostname)
+						}
+					}
+				} else {
+					return nil, fmt.Errorf("unexpected type for Stdout result")
+				}
+				return nil, nil
+			})
+			return hostnameCmd, nil
+		})
+		if err != nil {
+			return err
+		}
+
+		ctx.Export("kubeconfig", kubeconfig)
 
 		ctx.Export("serviceAccountName", serviceAccount.Name)
 		ctx.Export("BucketName", bucket.Name)
@@ -186,8 +189,8 @@ func main() {
 		ctx.Export("masterExternalIP", masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp())
 		ctx.Export("masterInternalIP", masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).NetworkIp())
 
-		ctx.Export("masterMachinePrivateKey", pulumi.String(privateKey))
-		ctx.Export("masterMachinePublicKey", pulumi.String(publicKey))
+		//ctx.Export("masterMachinePrivateKey", pulumi.String(privateKey))
+		//ctx.Export("masterMachinePublicKey", pulumi.String(publicKey))
 
 		ctx.Export("networkName", network1.Name)
 		ctx.Export("subnetName", subnet.Name)
