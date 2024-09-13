@@ -1,7 +1,8 @@
-package k8s
+package config
 
 import (
 	"fmt"
+	k8sService "k8s-serverless/k8s/service"
 
 	"github.com/pulumi/pulumi-command/sdk/go/command/remote"
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/compute"
@@ -16,7 +17,7 @@ func GenerateMasterKubeConfig(ctx *pulumi.Context, masterMachine *compute.Instan
 			return nil, fmt.Errorf("masterExternalIp is nil")
 		}
 
-		ready, err := waitForLockFile(ctx, privateKey, *ip)
+		ready, err := k8sService.WaitForLockFile(ctx, privateKey, *ip)
 		if err != nil {
 			return nil, err
 		}

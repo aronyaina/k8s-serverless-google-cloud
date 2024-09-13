@@ -1,4 +1,4 @@
-package k8s
+package ressource
 
 import (
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/compute"

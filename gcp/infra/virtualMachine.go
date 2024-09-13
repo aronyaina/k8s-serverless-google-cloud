@@ -15,6 +15,7 @@ func GenerateWorkerMachine(ctx *pulumi.Context, workerIndex int, lastInstance *c
 	var image pulumi.String = "ubuntu-os-cloud/ubuntu-2004-lts"
 	var networkTier pulumi.String = "STANDARD"
 
+	//TODO: Implement the k8s script
 	workerCommand := pulumi.All(bucket.Name, workerIndex).ApplyT(func(args []interface{}) (string, error) {
 		bucketName := args[0].(string)
 		workerIndice := args[1].(int)
@@ -26,10 +27,15 @@ func GenerateWorkerMachine(ctx *pulumi.Context, workerIndex int, lastInstance *c
 			sudo snap install microk8s --classic --channel=1.31 | tee -a $LOG_FILE
 			sudo usermod -aG microk8s $(whoami) | tee -a $LOG_FILE
 			newgrp microk8s 
-			while ! sudo microk8s status --wait-ready; do
-				echo "waiting for microk8s to be ready" | tee -a $LOG_FILE
-				sleep 5
-			done
+			if sudo microk8s status --wait-ready; then
+        echo "microk8s is ready" | tee -a $LOG_FILE
+        touch /tmp/k8sready.lock
+        break
+			else
+					echo "Waiting for microk8s to be ready"
+					sleep 10
+			fi
+
 
 			MAX_COPY_RETRIES=10
 			COPY_RETRY_DELAY=15
@@ -107,7 +113,7 @@ func GenerateWorkerMachine(ctx *pulumi.Context, workerIndex int, lastInstance *c
 
 }
 
-func GenerateMasterMachine(ctx *pulumi.Context, workerNumber int, instanceName string, network *compute.Network, subnetwork *compute.Subnetwork, bucket *storage.Bucket, publicKey string, service_account *serviceaccount.Account) (*compute.Instance, error) {
+func GenerateMasterMachine(ctx *pulumi.Context, workerNumber int, instanceName string, network *compute.Network, subnetwork *compute.Subnetwork, bucket *storage.Bucket, service_account *serviceaccount.Account, publicKey string) (*compute.Instance, error) {
 	var machineType pulumi.String = "e2-small"
 	var region pulumi.String = "us-central1-a"
 	var image pulumi.String = "ubuntu-os-cloud/ubuntu-2004-lts"
@@ -127,13 +133,14 @@ func GenerateMasterMachine(ctx *pulumi.Context, workerNumber int, instanceName s
 			newgrp microk8s | tee -a $LOG_FILE
 			if sudo microk8s status --wait-ready; then
         echo "microk8s is ready" | tee -a $LOG_FILE
-        touch /tmp/microk8s-ready.lock
+        touch /tmp/k8sready.lock
         break
 			else
 					echo "Waiting for microk8s to be ready"
 					sleep 10
 			fi
 			sudo microk8s enable dns | tee -a $LOG_FILE
+
 			for i in $(seq 1 %d); do
 				JOIN_COMMAND=$(sudo microk8s add-node | grep 'microk8s join' | sed -n '2p')
 				if [ -n "$JOIN_COMMAND" ]; then

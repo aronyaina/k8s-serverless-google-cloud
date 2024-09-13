@@ -1,4 +1,4 @@
-package ressources
+package ressource
 
 import (
 	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes"

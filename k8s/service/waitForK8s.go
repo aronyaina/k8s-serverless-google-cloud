@@ -5,7 +5,7 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-func waitForLockFile(ctx *pulumi.Context, privateKey string, masterIp string) (*remote.Command, error) {
+func WaitForLockFile(ctx *pulumi.Context, privateKey string, masterIp string) (*remote.Command, error) {
 	lockCheckCmd := `
         for i in {1..10}; do
             if [ -f /tmp/microk8s-ready.lock ]; then
@@ -34,3 +34,10 @@ func waitForLockFile(ctx *pulumi.Context, privateKey string, masterIp string) (*
 
 	return ready, nil
 }
+
+//namespace, err := ressources.GenerateNameSpace(ctx, "dev-ns", "dev", provider)
+//if err != nil {
+//	return err
+//}
+
+//ctx.Export("namespaceName", namespace.Metadata.Name())
