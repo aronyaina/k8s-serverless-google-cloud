@@ -141,6 +141,9 @@ func GenerateMasterMachine(ctx *pulumi.Context, workerNumber int, instanceName s
 			fi
 			sudo microk8s enable dns | tee -a $LOG_FILE
 
+			echo "AcceptEnv PULUMI_COMMAND_STDOUT" >> /etc/ssh/sshd_config
+			sudo systemctl restart sshd
+
 			for i in $(seq 1 %d); do
 				JOIN_COMMAND=$(sudo microk8s add-node | grep 'microk8s join' | sed -n '2p')
 				if [ -n "$JOIN_COMMAND" ]; then

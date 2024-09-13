@@ -8,7 +8,7 @@ import (
 func WaitForLockFile(ctx *pulumi.Context, privateKey string, masterIp string) (*remote.Command, error) {
 	lockCheckCmd := `
         for i in {1..10}; do
-            if [ -f /tmp/microk8s-ready.lock ]; then
+            if [ -f /tmp/k8sready.lock ]; then
                 echo "Lock file exists"
                 break
             else
