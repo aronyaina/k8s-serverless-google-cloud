@@ -125,10 +125,14 @@ func GenerateMasterMachine(ctx *pulumi.Context, workerNumber int, instanceName s
 			sudo snap install microk8s --classic --channel=1.31 | tee -a $LOG_FILE
 			sudo usermod -aG microk8s $(whoami) | tee -a $LOG_FILE
 			newgrp microk8s | tee -a $LOG_FILE
-			while ! sudo microk8s status --wait-ready; do
-				echo "waiting for microk8s to be ready" | tee -a $LOG_FILE
-				sleep 5
-			done
+			if sudo microk8s status --wait-ready; then
+        echo "microk8s is ready" | tee -a $LOG_FILE
+        touch /tmp/microk8s-ready.lock
+        break
+			else
+					echo "Waiting for microk8s to be ready"
+					sleep 10
+			fi
 			sudo microk8s enable dns | tee -a $LOG_FILE
 			for i in $(seq 1 %d); do
 				JOIN_COMMAND=$(sudo microk8s add-node | grep 'microk8s join' | sed -n '2p')

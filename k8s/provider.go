@@ -6,11 +6,8 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-func GenerateProvider(ctx *pulumi.Context, machine *compute.Instance) (*kubernetes.Provider, error) {
-
-	var providerName string = "gcp-k8s-provider"
-	var microk8sProvider pulumi.String = "/var/snap/microk8s/current/credentials/kubelet.config"
-
+func GenerateProvider(ctx *pulumi.Context, machine *compute.Instance, providerName string, microk8sProvider pulumi.String) (*kubernetes.Provider, error) {
+	providerName = "provider-" + providerName
 	k8sProvider, err := kubernetes.NewProvider(ctx, providerName, &kubernetes.ProviderArgs{
 		Kubeconfig: microk8sProvider,
 	}, pulumi.DependsOn([]pulumi.Resource{machine}))
