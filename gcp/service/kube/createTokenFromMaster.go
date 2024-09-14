@@ -4,12 +4,11 @@ import (
 	"fmt"
 
 	"github.com/pulumi/pulumi-command/sdk/go/command/remote"
-	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/compute"
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/storage"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-func GenerateTokenFromMasterAndUploadIt(ctx *pulumi.Context, masterExternalIp pulumi.StringPtrOutput, workerNumber int, bucket *storage.Bucket, masterMachine *compute.Instance, privateKey string, triggers pulumi.Array) (pulumi.Output, error) {
+func GenerateTokenFromMasterAndUploadIt(ctx *pulumi.Context, masterExternalIp pulumi.StringPtrOutput, workerNumber int, bucket *storage.Bucket, privateKey string, triggers pulumi.Array) (pulumi.Output, error) {
 	//masterExternalIp := masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
 	CopyToken := masterExternalIp.ApplyT(func(ip *string) (interface{}, error) {
 		if ip == nil {
