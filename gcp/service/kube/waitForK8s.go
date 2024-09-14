@@ -1,4 +1,4 @@
-package k8s
+package kube
 
 import (
 	"github.com/pulumi/pulumi-command/sdk/go/command/remote"

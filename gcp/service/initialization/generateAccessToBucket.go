@@ -1,8 +1,8 @@
-package service
+package initialization
 
 import (
-	"k8s-serverless/gcp/access"
-	"k8s-serverless/gcp/infra"
+	"k8s-serverless/gcp/repository/access"
+	"k8s-serverless/gcp/repository/infra"
 	"log"
 
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/serviceaccount"

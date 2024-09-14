@@ -1,7 +1,7 @@
-package service
+package initialization
 
 import (
-	"k8s-serverless/gcp/network"
+	"k8s-serverless/gcp/repository/network"
 	"log"
 
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/compute"

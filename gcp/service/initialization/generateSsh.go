@@ -1,4 +1,4 @@
-package service
+package initialization
 
 import (
 	"k8s-serverless/pkg"

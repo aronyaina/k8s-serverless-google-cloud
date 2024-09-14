@@ -16,7 +16,6 @@ func GenerateNameSpace(ctx *pulumi.Context, name string, environment string, pro
 			},
 		},
 	}
-
 	myNamespace, err := corev1.NewNamespace(ctx, name, nameSpaceMetaData, pulumi.Provider(provider))
 	if err != nil {
 		return nil, err
