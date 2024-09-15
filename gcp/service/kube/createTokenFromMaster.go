@@ -2,6 +2,7 @@ package kube
 
 import (
 	"fmt"
+	"k8s-serverless/utils"
 
 	"github.com/pulumi/pulumi-command/sdk/go/command/remote"
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/storage"
@@ -10,6 +11,24 @@ import (
 
 func GenerateTokenFromMasterAndUploadIt(ctx *pulumi.Context, masterExternalIp pulumi.StringPtrOutput, workerNumber int, bucket *storage.Bucket, privateKey string, triggers pulumi.Array) (pulumi.Output, error) {
 	//masterExternalIp := masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
+	copyCommand := pulumi.All(workerNumber, bucket.Name).ApplyT(func(args []interface{}) (string, error) {
+		workerNum := args[0].(int)
+		bucketName := args[1].(string)
+
+		return fmt.Sprintf(`
+			for i in $(seq 1 %d); do
+				echo "Generating join command for node $i"
+				JOIN_COMMAND=$(sudo microk8s add-node | grep 'microk8s join' | sed -n '2p')
+				if [ -n "$JOIN_COMMAND" ]; then
+					sudo echo $JOIN_COMMAND > /home/$(whoami)/join-command-$i.txt
+					sudo gsutil cp /home/$(whoami)/join-command-$i.txt gs://%s/join-command-$i.txt
+					echo "Join command for node $i stored and uploaded."
+				fi
+			done
+			echo "Token generation completed"
+			`, workerNum, bucketName), nil
+	}).(pulumi.StringOutput)
+
 	CopyToken := masterExternalIp.ApplyT(func(ip *string) (interface{}, error) {
 		if ip == nil {
 			return nil, fmt.Errorf("masterExternalIp is nil")
@@ -20,24 +39,6 @@ func GenerateTokenFromMasterAndUploadIt(ctx *pulumi.Context, masterExternalIp pu
 			return nil, err
 		}
 		triggers = append(triggers, k8sReady)
-
-		copyCommand := pulumi.All(workerNumber, bucket.Name).ApplyT(func(args []interface{}) (string, error) {
-			workerNum := args[0].(int)
-			bucketName := args[1].(string)
-
-			return fmt.Sprintf(`
-			for i in $(seq 1 %d); do
-				echo "Generating join command for node $i"
-				JOIN_COMMAND=$(sudo microk8s add-node | grep 'microk8s join' | sed -n '2p')
-				if [ -n "$JOIN_COMMAND" ]; then
-					echo $JOIN_COMMAND > /home/join-command-$i.txt
-					gsutil cp /home/join-command-$i.txt gs://%s/join-command-$i.txt
-					echo "Join command for node $i stored and uploaded."
-				fi
-			done
-			echo "Token generation completed"
-			`, workerNum, bucketName), nil
-		}).(pulumi.StringOutput)
 
 		// Command arguments for fetching the key data
 		copyTokenCmdArgs := &remote.CommandArgs{
@@ -50,8 +51,12 @@ func GenerateTokenFromMasterAndUploadIt(ctx *pulumi.Context, masterExternalIp pu
 			Triggers: triggers,
 		}
 
+		name, err := utils.CreateUniqueString("createToken-master")
+		if err != nil {
+			return nil, err
+		}
 		// Create the remote command for the key
-		copyCmd, err := remote.NewCommand(ctx, "keyCmd", copyTokenCmdArgs)
+		copyCmd, err := remote.NewCommand(ctx, name, copyTokenCmdArgs)
 		if err != nil {
 			return nil, err
 		}

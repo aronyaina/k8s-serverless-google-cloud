@@ -6,7 +6,7 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-func ConnectMicroInfra(ctx *pulumi.Context, masterMachine *compute.Instance, workerMachine []*compute.Instance, workerNumber int, bucket *storage.Bucket, masterPrivateKey string, workerPrivateKey string, triggers pulumi.Array) error {
+func ConnectMicroInfra(ctx *pulumi.Context, masterMachine *compute.Instance, workerMachines []*compute.Instance, workerNumber int, bucket *storage.Bucket, masterPrivateKey string, workerPrivateKey string, triggers pulumi.Array) error {
 	masterExternalIp := masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
 	debugOutputCreation, err := GenerateTokenFromMasterAndUploadIt(ctx, masterExternalIp, workerNumber, bucket, masterPrivateKey, triggers)
 	if err != nil {
@@ -14,9 +14,12 @@ func ConnectMicroInfra(ctx *pulumi.Context, masterMachine *compute.Instance, wor
 	}
 
 	workerTriggers := pulumi.Array{debugOutputCreation}
-	for workerIndex, workerMachine := range workerMachine {
-		workerExternalIp := workerMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
-		RetrieveTokenFromBucket(ctx, workerExternalIp, workerIndex, bucket, workerPrivateKey, workerTriggers)
+
+	if workerNumber >= 1 {
+		for i := 1; i <= workerNumber; i++ {
+			workerExternalIp := workerMachines[i-1].NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
+			RetrieveTokenFromBucket(ctx, workerExternalIp, i, bucket, workerPrivateKey, workerTriggers)
+		}
 	}
 
 	ctx.Export("TokenGeneration", debugOutputCreation)

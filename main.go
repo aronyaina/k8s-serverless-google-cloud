@@ -9,7 +9,7 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-const WORKER_NUMBER = 1
+const WORKER_NUMBER = 2
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {
@@ -19,7 +19,7 @@ func main() {
 			return err
 		}
 
-		triggers := pulumi.Array{masterMachine, bucket}
+		triggers := pulumi.Array{bucket}
 
 		if err = kube.ConnectMicroInfra(ctx, masterMachine, workerMachines, WORKER_NUMBER, bucket, masterPrivateKey, workerPrivateKey, triggers); err != nil {
 			log.Println("Error While connecting microk8s infra")

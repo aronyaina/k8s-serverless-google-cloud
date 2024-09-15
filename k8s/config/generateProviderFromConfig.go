@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"k8s-serverless/utils"
 
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/compute"
 	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes"
@@ -14,13 +15,6 @@ func GenerateProviderFromConfig(ctx *pulumi.Context, masterMachine *compute.Inst
 		return nil, err
 	}
 
-	masterName := masterMachine.Name.ApplyT(func(name interface{}) (string, error) {
-		if resultStr, ok := name.(string); ok {
-			return resultStr, nil
-		}
-		return "", nil
-	}).(pulumi.StringOutput)
-
 	k8sConfig := pulumi.Output(kubeConfig).ApplyT(func(result interface{}) (string, error) {
 		if resultStr, ok := result.(string); ok {
 			return resultStr, nil
@@ -28,7 +22,12 @@ func GenerateProviderFromConfig(ctx *pulumi.Context, masterMachine *compute.Inst
 		return "", fmt.Errorf("unexpected type for kubeconfig result")
 	}).(pulumi.StringOutput)
 
-	provider, err := kubernetes.NewProvider(ctx, fmt.Sprintf("%s-provider", masterName), &kubernetes.ProviderArgs{
+	providerName, err := utils.CreateUniqueString("provider")
+	if err != nil {
+		return nil, err
+	}
+
+	provider, err := kubernetes.NewProvider(ctx, providerName, &kubernetes.ProviderArgs{
 		Kubeconfig: k8sConfig,
 	})
 

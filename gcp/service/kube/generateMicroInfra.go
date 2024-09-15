@@ -3,6 +3,7 @@ package kube
 import (
 	gcpinfra "k8s-serverless/gcp/repository/infra"
 	"k8s-serverless/gcp/service/initialization"
+	"k8s-serverless/utils"
 	"log"
 	"strconv"
 
@@ -12,12 +13,12 @@ import (
 )
 
 func GenerateMicroInfra(ctx *pulumi.Context, vmNumber int) (master_machine *compute.Instance, worker_machines []*compute.Instance, master_private_key string, worker_private_key string, bucket *storage.Bucket, err error) {
-	masterPrivateKey, masterPublicKey, err := initialization.GenerateSshIfItDoesntExist()
+	masterPrivateKey, masterPublicKey, err := initialization.GenerateSshIfItDoesntExist("master")
 	if err != nil {
 		log.Println("Error while creating ssh for master")
 		return nil, nil, "", "", nil, err
 	}
-	workerPrivateKey, workerPublicKey, err := initialization.GenerateSshIfItDoesntExist()
+	workerPrivateKey, workerPublicKey, err := initialization.GenerateSshIfItDoesntExist("worker")
 	if err != nil {
 		log.Println("Error while creating ssh for worker")
 		return nil, nil, "", "", nil, err
@@ -34,7 +35,11 @@ func GenerateMicroInfra(ctx *pulumi.Context, vmNumber int) (master_machine *comp
 		return nil, nil, "", "", nil, err
 	}
 
-	masterMachine, err := gcpinfra.GenerateMasterMachine(ctx, vmNumber, "master-node", network, subnet, bucket, serviceAccount, masterPublicKey)
+	name, err := utils.CreateUniqueString("master-node")
+	if err != nil {
+		return nil, nil, "", "", nil, err
+	}
+	masterMachine, err := gcpinfra.GenerateMasterMachine(ctx, vmNumber, name, network, subnet, bucket, serviceAccount, masterPublicKey)
 	if err != nil {
 		log.Println("Error while creating master machine")
 		return nil, nil, "", "", nil, err

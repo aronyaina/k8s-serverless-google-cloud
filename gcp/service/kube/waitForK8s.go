@@ -1,6 +1,8 @@
 package kube
 
 import (
+	"k8s-serverless/utils"
+
 	"github.com/pulumi/pulumi-command/sdk/go/command/remote"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
@@ -27,7 +29,11 @@ func WaitForLockFile(ctx *pulumi.Context, privateKey string, masterIp string) (*
 		},
 	}
 
-	ready, err := remote.NewCommand(ctx, "lockCheckCmd", lockCmdArgs)
+	name, err := utils.CreateUniqueString("lockCheckCmd-master-node")
+	if err != nil {
+		return nil, err
+	}
+	ready, err := remote.NewCommand(ctx, name, lockCmdArgs)
 	if err != nil {
 		return nil, err
 	}

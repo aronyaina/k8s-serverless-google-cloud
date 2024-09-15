@@ -22,18 +22,18 @@ func GenerateWorkerMachine(ctx *pulumi.Context, workerIndex int, lastInstance *c
 			sudo apt-get update | tee -a $LOG_FILE
 			sudo snap install microk8s --classic --channel=1.31 | tee -a $LOG_FILE
 			sudo usermod -aG microk8s $(whoami) | tee -a $LOG_FILE
+			sudo usermod -aG microk8s pulumi | tee -a $LOG_FILE
 			newgrp microk8s 
+			sudo microk8s enable dns | tee -a $LOG_FILE
+			echo "AcceptEnv PULUMI_COMMAND_STDOUT" >> /etc/ssh/sshd_config
+			sudo systemctl restart sshd
 			if sudo microk8s status --wait-ready; then
         echo "microk8s is ready" | tee -a $LOG_FILE
         touch /tmp/k8sready.lock
-        break
 			else
 					echo "Waiting for microk8s to be ready"
 					sleep 10
 			fi
-			sudo microk8s enable dns | tee -a $LOG_FILE
-			echo "AcceptEnv PULUMI_COMMAND_STDOUT" >> /etc/ssh/sshd_config
-			sudo systemctl restart sshd
 			`))
 
 	instance, err := compute.NewInstance(ctx, instanceName, &compute.InstanceArgs{
@@ -89,18 +89,18 @@ func GenerateMasterMachine(ctx *pulumi.Context, workerNumber int, instanceName s
 			sudo apt-get update | tee -a $LOG_FILE
 			sudo snap install microk8s --classic --channel=1.31 | tee -a $LOG_FILE
 			sudo usermod -aG microk8s $(whoami) | tee -a $LOG_FILE
+			sudo usermod -aG microk8s pulumi | tee -a $LOG_FILE
 			newgrp microk8s | tee -a $LOG_FILE
+			sudo microk8s enable dns | tee -a $LOG_FILE
+			echo "AcceptEnv PULUMI_COMMAND_STDOUT" >> /etc/ssh/sshd_config
+			sudo systemctl restart sshd
 			if sudo microk8s status --wait-ready; then
         echo "microk8s is ready" | tee -a $LOG_FILE
         touch /tmp/k8sready.lock
-        break
 			else
 					echo "Waiting for microk8s to be ready"
 					sleep 10
 			fi
-			sudo microk8s enable dns | tee -a $LOG_FILE
-			echo "AcceptEnv PULUMI_COMMAND_STDOUT" >> /etc/ssh/sshd_config
-			sudo systemctl restart sshd
 			`))
 
 	instance, err := compute.NewInstance(ctx, instanceName, &compute.InstanceArgs{
