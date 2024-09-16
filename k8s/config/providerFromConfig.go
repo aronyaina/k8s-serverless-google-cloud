@@ -14,18 +14,18 @@ func GenerateProviderFromConfig(ctx *pulumi.Context, masterMachine *compute.Inst
 			return "", fmt.Errorf("master machine name is empty")
 		}
 		return name, nil
-	}).(pulumi.StringOutput)
+	})
 
 	kubeConfig, err := GenerateMasterKubeConfig(ctx, masterMachine, fmt.Sprintf("%s", masterMachineName), privateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	k8sConfig := pulumi.Output(kubeConfig).ApplyT(func(result interface{}) (*string, error) {
+	k8sConfig := pulumi.Output(kubeConfig).ApplyT(func(result interface{}) (string, error) {
 		if resultStr, ok := result.(string); ok {
-			return &resultStr, nil
+			return resultStr, nil
 		}
-		return nil, fmt.Errorf("unexpected type for kubeconfig result")
+		return "", fmt.Errorf("unexpected type for kubeconfig result")
 	}).(pulumi.StringOutput)
 
 	provider, err := kubernetes.NewProvider(ctx, fmt.Sprintf("provider-%s", masterMachineName), &kubernetes.ProviderArgs{

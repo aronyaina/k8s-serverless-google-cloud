@@ -66,11 +66,8 @@ func GenerateMicroInfra(ctx *pulumi.Context, vmNumber int) (master_machine *comp
 
 func ConnectMicroInfra(ctx *pulumi.Context, masterMachine *compute.Instance, workerMachines []*compute.Instance, workerNumber int, bucket *storage.Bucket, masterPrivateKey string, workerPrivateKey string, triggers pulumi.Array) error {
 	masterExternalIp := masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
-	masterName := masterMachine.Name.ApplyT(func(result interface{}) (string, error) {
-		if resultStr, ok := result.(string); ok {
-			return resultStr, nil
-		}
-		return "", fmt.Errorf("unexpected type for key result")
+	masterName := masterMachine.Name.ApplyT(func(result string) string {
+		return result
 	})
 	debugOutputCreation, err := GenerateTokenFromMasterAndUploadIt(ctx, fmt.Sprintf("%s", masterName), masterExternalIp, workerNumber, bucket, masterPrivateKey, triggers)
 	if err != nil {

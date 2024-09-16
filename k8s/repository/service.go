@@ -20,7 +20,7 @@ func GenerateService(ctx *pulumi.Context, appLabels pulumi.StringMap, provider *
 				&corev1.ServicePortArgs{
 					Port:       pulumi.Int(80),
 					TargetPort: pulumi.Int(80),
-					NodePort:   pulumi.Int(30200),
+					NodePort:   pulumi.Int(30100),
 				},
 			},
 		},

@@ -55,7 +55,7 @@ func RetrieveTokenFromBucket(ctx *pulumi.Context, workerExternalIp pulumi.String
 			return nil, fmt.Errorf("workerExternalIp is nil")
 		}
 
-		ready, err := WaitForLockFile(ctx, privateKey, fmt.Sprintf("wait-lock-%s", workerIndice), *ip)
+		ready, err := WaitForLockFile(ctx, privateKey, fmt.Sprintf("wait-lock-worker-%v", workerIndice), *ip)
 		if err != nil {
 			return nil, err
 		}

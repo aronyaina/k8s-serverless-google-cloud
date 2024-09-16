@@ -93,6 +93,7 @@ func GenerateMasterMachine(ctx *pulumi.Context, workerNumber int, instanceName s
 			sudo usermod -aG microk8s pulumi | tee -a $LOG_FILE
 			newgrp microk8s | tee -a $LOG_FILE
 			sudo microk8s enable dns | tee -a $LOG_FILE
+			sudo microk8s enable ha-cluster
 			echo "AcceptEnv PULUMI_COMMAND_STDOUT" >> /etc/ssh/sshd_config
 			sudo systemctl restart sshd
 			if sudo microk8s status --wait-ready; then

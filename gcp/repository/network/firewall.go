@@ -10,7 +10,6 @@ func GenerateFirewall(ctx *pulumi.Context, network *compute.Network) error {
 		"tcp": {
 			"22",
 			"53",
-			"30100",
 			"80",
 			"443",
 			"2379",
@@ -19,6 +18,7 @@ func GenerateFirewall(ctx *pulumi.Context, network *compute.Network) error {
 			"10259",
 			"16443",
 			"25000",
+			"30100",
 		},
 		"icmp": {},
 	}
