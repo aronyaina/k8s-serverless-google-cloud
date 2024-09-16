@@ -2,7 +2,6 @@ package kube
 
 import (
 	"fmt"
-	"k8s-serverless/utils"
 
 	"github.com/pulumi/pulumi-command/sdk/go/command/remote"
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/storage"
@@ -56,7 +55,7 @@ func RetrieveTokenFromBucket(ctx *pulumi.Context, workerExternalIp pulumi.String
 			return nil, fmt.Errorf("workerExternalIp is nil")
 		}
 
-		ready, err := WaitForLockFile(ctx, privateKey, *ip)
+		ready, err := WaitForLockFile(ctx, privateKey, fmt.Sprintf("wait-lock-%s", workerIndice), *ip)
 		if err != nil {
 			return nil, err
 		}
@@ -74,12 +73,8 @@ func RetrieveTokenFromBucket(ctx *pulumi.Context, workerExternalIp pulumi.String
 			Triggers: triggers,
 		}
 
-		name, err := utils.CreateUniqueString("copyTokenCmd-worker")
-		if err != nil {
-			return err, nil
-		}
 		// Create the remote command for the key
-		copyCmd, err := remote.NewCommand(ctx, name, copyTokenCmdArgs)
+		copyCmd, err := remote.NewCommand(ctx, fmt.Sprintf("copy-token-to-%v", workerIndice), copyTokenCmdArgs)
 		if err != nil {
 			return nil, err
 		}

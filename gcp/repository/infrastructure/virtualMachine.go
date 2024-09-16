@@ -1,4 +1,4 @@
-package infra
+package infrastructure
 
 import (
 	"fmt"
@@ -73,6 +73,7 @@ func GenerateWorkerMachine(ctx *pulumi.Context, workerIndex int, lastInstance *c
 		},
 		MetadataStartupScript: workerCommand,
 	}, pulumi.DependsOn([]pulumi.Resource{lastInstance}))
+
 	if err != nil {
 		return nil, err
 	}

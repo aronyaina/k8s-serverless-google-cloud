@@ -2,14 +2,13 @@ package kube
 
 import (
 	"fmt"
-	"k8s-serverless/utils"
 
 	"github.com/pulumi/pulumi-command/sdk/go/command/remote"
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/storage"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-func GenerateTokenFromMasterAndUploadIt(ctx *pulumi.Context, masterExternalIp pulumi.StringPtrOutput, workerNumber int, bucket *storage.Bucket, privateKey string, triggers pulumi.Array) (pulumi.Output, error) {
+func GenerateTokenFromMasterAndUploadIt(ctx *pulumi.Context, masterName string, masterExternalIp pulumi.StringPtrOutput, workerNumber int, bucket *storage.Bucket, privateKey string, triggers pulumi.Array) (pulumi.Output, error) {
 	//masterExternalIp := masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
 	copyCommand := pulumi.All(workerNumber, bucket.Name).ApplyT(func(args []interface{}) (string, error) {
 		workerNum := args[0].(int)
@@ -34,7 +33,7 @@ func GenerateTokenFromMasterAndUploadIt(ctx *pulumi.Context, masterExternalIp pu
 			return nil, fmt.Errorf("masterExternalIp is nil")
 		}
 
-		k8sReady, err := WaitForLockFile(ctx, privateKey, *ip)
+		k8sReady, err := WaitForLockFile(ctx, privateKey, fmt.Sprintf("copyToBucket-cmd-%s", masterName), *ip)
 		if err != nil {
 			return nil, err
 		}
@@ -51,12 +50,8 @@ func GenerateTokenFromMasterAndUploadIt(ctx *pulumi.Context, masterExternalIp pu
 			Triggers: triggers,
 		}
 
-		name, err := utils.CreateUniqueString("createToken-master")
-		if err != nil {
-			return nil, err
-		}
 		// Create the remote command for the key
-		copyCmd, err := remote.NewCommand(ctx, name, copyTokenCmdArgs)
+		copyCmd, err := remote.NewCommand(ctx, "copyCaKeyFromMaster", copyTokenCmdArgs)
 		if err != nil {
 			return nil, err
 		}

@@ -2,7 +2,7 @@ package initialization
 
 import (
 	"k8s-serverless/gcp/repository/access"
-	"k8s-serverless/gcp/repository/infra"
+	"k8s-serverless/gcp/repository/infrastructure"
 	"log"
 
 	"github.com/pulumi/pulumi-gcp/sdk/v7/go/gcp/serviceaccount"
@@ -23,7 +23,7 @@ func GenerateServiceLinkedToBucket(ctx *pulumi.Context) (*serviceaccount.Account
 		return nil, nil, err
 	}
 
-	bucket, err := infra.GenerateBucket(ctx, "bucket-storage-for-token")
+	bucket, err := infrastructure.GenerateBucket(ctx, "gs-token")
 	if err != nil {
 		log.Println("error while creating bucket")
 		return nil, nil, err

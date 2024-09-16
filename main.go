@@ -3,7 +3,7 @@ package main
 import (
 	"k8s-serverless/gcp/service/kube"
 	"k8s-serverless/k8s/config"
-	"k8s-serverless/k8s/ressource"
+	"k8s-serverless/k8s/repository"
 	"log"
 
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -31,12 +31,20 @@ func main() {
 			return err
 		}
 
-		namespace, err := ressource.GenerateNameSpace(ctx, "k8s-serverless", "dev", provider)
+		namespace, err := repository.GenerateNamespace(ctx, "dev", "k8s-serverless", provider, []pulumi.Resource{provider})
 		if err != nil {
 			return err
 		}
 
-		ctx.Export("Namespace", namespace)
+		labels := pulumi.StringMap{"app": pulumi.String("nginx")}
+		service, err := repository.GenerateService(ctx, labels, provider, []pulumi.Resource{namespace, provider})
+		if err != nil {
+			return err
+		}
+		_, err = repository.GenerateDeployment(ctx, labels, "nginx", provider, []pulumi.Resource{namespace, provider, service})
+		if err != nil {
+			return err
+		}
 
 		return nil
 	})

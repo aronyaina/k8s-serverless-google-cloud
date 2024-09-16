@@ -1,9 +1,9 @@
 package kube
 
 import (
-	gcpinfra "k8s-serverless/gcp/repository/infra"
+	"fmt"
+	gcpinfra "k8s-serverless/gcp/repository/infrastructure"
 	"k8s-serverless/gcp/service/initialization"
-	"k8s-serverless/utils"
 	"log"
 	"strconv"
 
@@ -35,11 +35,7 @@ func GenerateMicroInfra(ctx *pulumi.Context, vmNumber int) (master_machine *comp
 		return nil, nil, "", "", nil, err
 	}
 
-	name, err := utils.CreateUniqueString("master-node")
-	if err != nil {
-		return nil, nil, "", "", nil, err
-	}
-	masterMachine, err := gcpinfra.GenerateMasterMachine(ctx, vmNumber, name, network, subnet, bucket, serviceAccount, masterPublicKey)
+	masterMachine, err := gcpinfra.GenerateMasterMachine(ctx, vmNumber, "master-node-1", network, subnet, bucket, serviceAccount, masterPublicKey)
 	if err != nil {
 		log.Println("Error while creating master machine")
 		return nil, nil, "", "", nil, err
@@ -66,4 +62,31 @@ func GenerateMicroInfra(ctx *pulumi.Context, vmNumber int) (master_machine *comp
 	}
 
 	return masterMachine, allMachines, masterPrivateKey, workerPrivateKey, bucket, nil
+}
+
+func ConnectMicroInfra(ctx *pulumi.Context, masterMachine *compute.Instance, workerMachines []*compute.Instance, workerNumber int, bucket *storage.Bucket, masterPrivateKey string, workerPrivateKey string, triggers pulumi.Array) error {
+	masterExternalIp := masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
+	masterName := masterMachine.Name.ApplyT(func(result interface{}) (string, error) {
+		if resultStr, ok := result.(string); ok {
+			return resultStr, nil
+		}
+		return "", fmt.Errorf("unexpected type for key result")
+	})
+	debugOutputCreation, err := GenerateTokenFromMasterAndUploadIt(ctx, fmt.Sprintf("%s", masterName), masterExternalIp, workerNumber, bucket, masterPrivateKey, triggers)
+	if err != nil {
+		return err
+	}
+
+	workerTriggers := pulumi.Array{debugOutputCreation}
+
+	if workerNumber >= 1 {
+		for i := 1; i <= workerNumber; i++ {
+			workerExternalIp := workerMachines[i-1].NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
+			RetrieveTokenFromBucket(ctx, workerExternalIp, i, bucket, workerPrivateKey, workerTriggers)
+		}
+	}
+
+	ctx.Export("TokenGeneration", debugOutputCreation)
+	ctx.Export("TokenRetrieval", debugOutputCreation)
+	return nil
 }

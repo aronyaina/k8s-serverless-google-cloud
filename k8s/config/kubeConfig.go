@@ -9,7 +9,7 @@ import (
 	gcpservice "k8s-serverless/gcp/service/kube"
 )
 
-func GenerateMasterKubeConfig(ctx *pulumi.Context, masterMachine *compute.Instance, privateKey string) (pulumi.Output, error) {
+func GenerateMasterKubeConfig(ctx *pulumi.Context, masterMachine *compute.Instance, masterName string, privateKey string) (pulumi.Output, error) {
 	masterExternalIp := masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
 
 	kubeConfig := masterExternalIp.ApplyT(func(ip *string) (interface{}, error) {
@@ -17,7 +17,7 @@ func GenerateMasterKubeConfig(ctx *pulumi.Context, masterMachine *compute.Instan
 			return nil, fmt.Errorf("masterExternalIp is nil")
 		}
 
-		ready, err := gcpservice.WaitForLockFile(ctx, privateKey, *ip)
+		ready, err := gcpservice.WaitForLockFile(ctx, privateKey, masterName, *ip)
 		if err != nil {
 			return nil, err
 		}

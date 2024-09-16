@@ -1,4 +1,4 @@
-package ressource
+package repository
 
 import (
 	"github.com/pulumi/pulumi-kubernetes/sdk/v4/go/kubernetes"
@@ -7,7 +7,7 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-func GenerateNameSpace(ctx *pulumi.Context, name string, environment string, provider *kubernetes.Provider) (*corev1.Namespace, error) {
+func GenerateNamespace(ctx *pulumi.Context, name string, environment string, provider *kubernetes.Provider, ressourceDependence []pulumi.Resource) (*corev1.Namespace, error) {
 	nameSpaceMetaData := &corev1.NamespaceArgs{
 		Metadata: &metav1.ObjectMetaArgs{
 			Name: pulumi.String(name),
@@ -16,10 +16,11 @@ func GenerateNameSpace(ctx *pulumi.Context, name string, environment string, pro
 			},
 		},
 	}
-	myNamespace, err := corev1.NewNamespace(ctx, name, nameSpaceMetaData, pulumi.Provider(provider))
+	myNamespace, err := corev1.NewNamespace(ctx, name, nameSpaceMetaData, pulumi.Provider(provider), pulumi.DependsOn(ressourceDependence))
 	if err != nil {
 		return nil, err
 	}
+	ctx.Export("Namespace", myNamespace.Metadata.Name())
 	return myNamespace, nil
 
 }
