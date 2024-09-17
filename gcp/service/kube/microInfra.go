@@ -1,7 +1,6 @@
 package kube
 
 import (
-	"fmt"
 	gcpinfra "k8s-serverless/gcp/repository/infrastructure"
 	"k8s-serverless/gcp/service/initialization"
 	"log"
@@ -65,11 +64,9 @@ func GenerateMicroInfra(ctx *pulumi.Context, vmNumber int) (master_machine *comp
 }
 
 func ConnectMicroInfra(ctx *pulumi.Context, masterMachine *compute.Instance, workerMachines []*compute.Instance, workerNumber int, bucket *storage.Bucket, masterPrivateKey string, workerPrivateKey string, triggers pulumi.Array) error {
+
 	masterExternalIp := masterMachine.NetworkInterfaces.Index(pulumi.Int(0)).AccessConfigs().Index(pulumi.Int(0)).NatIp()
-	masterName := masterMachine.Name.ApplyT(func(result string) string {
-		return result
-	})
-	debugOutputCreation, err := GenerateTokenFromMasterAndUploadIt(ctx, fmt.Sprintf("%s", masterName), masterExternalIp, workerNumber, bucket, masterPrivateKey, triggers)
+	debugOutputCreation, err := GenerateTokenFromMasterAndUploadIt(ctx, "master-token-upload", masterExternalIp, workerNumber, bucket, masterPrivateKey, triggers)
 	if err != nil {
 		return err
 	}

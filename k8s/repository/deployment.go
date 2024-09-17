@@ -8,17 +8,17 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-func GenerateDeployment(ctx *pulumi.Context, appLabels pulumi.StringMap, appName string, provider *kubernetes.Provider, ressourceDependence []pulumi.Resource) (*appsv1.Deployment, error) {
-	deployment, err := appsv1.NewDeployment(ctx, appName, &appsv1.DeploymentArgs{
+func GenerateDeployment(ctx *pulumi.Context, namespace string, deployment_name string, image string, appLabels pulumi.StringMap, replicate int, provider *kubernetes.Provider, ressourceDependence []pulumi.Resource) (*appsv1.Deployment, error) {
+	deployment, err := appsv1.NewDeployment(ctx, deployment_name, &appsv1.DeploymentArgs{
 		Metadata: metav1.ObjectMetaArgs{
 			Labels:    appLabels,
-			Namespace: pulumi.String("dev"),
+			Namespace: pulumi.String(namespace),
 		},
 		Spec: &appsv1.DeploymentSpecArgs{
 			Selector: &metav1.LabelSelectorArgs{
 				MatchLabels: appLabels,
 			},
-			Replicas: pulumi.Int(5),
+			Replicas: pulumi.Int(replicate),
 			Template: &corev1.PodTemplateSpecArgs{
 				Metadata: &metav1.ObjectMetaArgs{
 					Labels: appLabels,
@@ -26,8 +26,8 @@ func GenerateDeployment(ctx *pulumi.Context, appLabels pulumi.StringMap, appName
 				Spec: &corev1.PodSpecArgs{
 					Containers: corev1.ContainerArray{
 						&corev1.ContainerArgs{
-							Name:  pulumi.String(appName),
-							Image: pulumi.String("nginx"),
+							Name:  pulumi.String(deployment_name),
+							Image: pulumi.String(image),
 						},
 					},
 				},

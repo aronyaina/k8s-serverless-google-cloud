@@ -37,11 +37,21 @@ func main() {
 		}
 
 		labels := pulumi.StringMap{"app": pulumi.String("nginx")}
-		service, err := repository.GenerateService(ctx, labels, provider, []pulumi.Resource{namespace, provider})
+		service, err := repository.GenerateService(ctx, "dev", "nginx-service", 80, 80, 30100, labels, provider, []pulumi.Resource{namespace, provider})
 		if err != nil {
 			return err
 		}
-		_, err = repository.GenerateDeployment(ctx, labels, "nginx", provider, []pulumi.Resource{namespace, provider, service})
+		_, err = repository.GenerateDeployment(ctx, "dev", "nginx-deployment", "nginx", labels, 5, provider, []pulumi.Resource{namespace, provider, service})
+		if err != nil {
+			return err
+		}
+
+		secretData := pulumi.StringMap{
+			"username": pulumi.String("myuser"),
+			"password": pulumi.String("mypassword"),
+		}
+
+		_, err = repository.GenerateSecret(ctx, "dev", "my-secret", "Opaque", secretData, provider, []pulumi.Resource{})
 		if err != nil {
 			return err
 		}

@@ -7,20 +7,20 @@ import (
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-func GenerateService(ctx *pulumi.Context, appLabels pulumi.StringMap, provider *kubernetes.Provider, ressourceDependence []pulumi.Resource) (*corev1.Service, error) {
-	service, err := corev1.NewService(ctx, "nginx-service", &corev1.ServiceArgs{
+func GenerateService(ctx *pulumi.Context, namespace string, name string, cluster_port int, target_port int, node_port int, appLabels pulumi.StringMap, provider *kubernetes.Provider, ressourceDependence []pulumi.Resource) (*corev1.Service, error) {
+	service, err := corev1.NewService(ctx, name, &corev1.ServiceArgs{
 		Metadata: &metav1.ObjectMetaArgs{
 			Labels:    appLabels,
-			Namespace: pulumi.String("dev"),
+			Namespace: pulumi.String(namespace),
 		},
 		Spec: &corev1.ServiceSpecArgs{
 			Type:     pulumi.String("NodePort"),
 			Selector: appLabels,
 			Ports: corev1.ServicePortArray{
 				&corev1.ServicePortArgs{
-					Port:       pulumi.Int(80),
-					TargetPort: pulumi.Int(80),
-					NodePort:   pulumi.Int(30100),
+					Port:       pulumi.Int(cluster_port),
+					TargetPort: pulumi.Int(target_port),
+					NodePort:   pulumi.Int(node_port),
 				},
 			},
 		},
